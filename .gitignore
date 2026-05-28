@@ -1,0 +1,13 @@
+*.pyc
+data/
+config/novum.yaml
+*bis.py
+.DS_Store
+viz/
+src/models/playground.py
+_output/
+wandb/
+third_party/
+.claude
+.vscode
+*egg-info/
