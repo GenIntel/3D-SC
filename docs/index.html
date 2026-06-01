@@ -1188,8 +1188,8 @@
           if(seenSrc.has(sk)||seenTrg.has(tk)) continue;
           seenSrc.add(sk); seenTrg.add(tk);
           const cr=dMnn.colors[i];
-          parts.push('<line x1="'+tx+'" y1="'+(ty+TY_OFF)+
-                     '" x2="'+(SRC_X+sx)+'" y2="'+(sy+SY_OFF)+
+          parts.push('<line x1="'+sx+'" y1="'+(sy+SY_OFF)+
+                     '" x2="'+(SRC_X+tx)+'" y2="'+(ty+TY_OFF)+
                      '" stroke="rgb('+cr[0]+','+cr[1]+','+cr[2]+')"/>');
       }
       svgEl.innerHTML=parts.join('');
@@ -1197,8 +1197,8 @@
 
   function drawBase(i){
       const cx=ctxs[i];
-      cx.drawImage(tI,0,TY_OFF);
-      cx.drawImage(sI,SRC_X,SY_OFF);
+      cx.drawImage(sI,0,SY_OFF);
+      cx.drawImage(tI,SRC_X,TY_OFF);
       cx.strokeStyle='rgba(107,114,128,0.5)';
       cx.lineWidth=1;cx.setLineDash([4,4]);
       cx.beginPath();cx.moveTo(TW+GAP/2,0);cx.lineTo(TW+GAP/2,CH);cx.stroke();
