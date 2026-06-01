@@ -11,3 +11,5 @@ third_party/
 .claude
 .vscode
 *egg-info/
+# under-review paper draft (do not publish)
+*.pdf

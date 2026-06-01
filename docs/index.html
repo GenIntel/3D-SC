@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geometry Matters: 3D Foundation Priors for Learning Semantic Correspondence</title>
+  <meta name="description" content="3D-aware post-training framework for semantic correspondence estimation using 3D foundation model priors." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #fafafa;
+      --surface:   #ffffff;
+      --border:    #e5e7eb;
+      --text:      #111827;
+      --muted:     #6b7280;
+      --accent:    #2563eb;
+      --accent-lt: #eff6ff;
+      --radius:    8px;
+      --max-w:     900px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 24px 40px;
+      text-align: center;
+    }
+
+    .venue-tag {
+      display: inline-block;
+      background: var(--accent-lt);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 600;
+      line-height: 1.25;
+      max-width: 740px;
+      margin: 0 auto 28px;
+    }
+
+    .authors {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .authors a { color: var(--muted); text-decoration: none; }
+    .authors a:hover { color: var(--accent); }
+
+    .affiliation {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.9;
+      margin-bottom: 28px;
+    }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background .15s, color .15s, box-shadow .15s;
+      border: 1.5px solid transparent;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; box-shadow: 0 2px 8px rgba(37,99,235,.3); }
+
+    .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+    .btn-outline:hover { background: var(--bg); border-color: #9ca3af; }
+
+    /* ── Main ── */
+    main {
+      max-width: var(--max-w);
+      margin: 48px auto;
+      padding: 0 24px;
+    }
+
+    section { margin-bottom: 56px; }
+
+    h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    p { margin-bottom: 14px; color: #374151; }
+    p:last-child { margin-bottom: 0; }
+
+    .abstract p { text-align: justify; text-justify: inter-word; hyphens: auto; }
+
+    /* ── Figure captions ── */
+    .fig-caption {
+      font-size: 13.5px;
+      color: var(--muted);
+      font-style: italic;
+      text-align: center;
+      margin-top: 10px;
+      line-height: 1.55;
+    }
+    .fig-caption strong { font-style: normal; color: #374151; }
+
+    /* ══════════════════════════════════════
+       Figure 1 — 3-panel motivation diagram
+    ══════════════════════════════════════ */
+    .fig1-panels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 580px) { .fig1-panels { grid-template-columns: 1fr; } }
+
+    .fig1-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .fig1-panel svg { width: 100%; height: auto; }
+
+    .fig1-panel-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 8px;
+    }
+
+    .fig1-panel-desc {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 2px;
+      text-align: center;
+    }
+
+    /* ══════════════════════════════════════
+       Figure 2 — Pipeline diagram
+    ══════════════════════════════════════ */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 20px 0 10px;
+    }
+
+    .stage-connector {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 28px;
+      color: #9ca3af;
+      font-size: 18px;
+    }
+
+    .pipeline-stage {
+      border-radius: var(--radius);
+      padding: 14px 18px 16px;
+    }
+
+    .stage-1 { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .stage-2 { background: #f5f3ff; border: 1px solid #ddd6fe; }
+    .stage-3 { background: #f0fdf4; border: 1px solid #bbf7d0; }
+
+    .stage-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .stage-1 .stage-title { color: #1d4ed8; }
+    .stage-2 .stage-title { color: #6d28d9; }
+    .stage-3 .stage-title { color: #15803d; }
+
+    /* horizontal flow row */
+    .pipe-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* sub-row for indented detail */
+    .pipe-subrow {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      padding-left: 4px;
+      opacity: .85;
+    }
+
+    .pipe-node {
+      background: #fff;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.25;
+      text-align: center;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      white-space: nowrap;
+    }
+
+    .pipe-node.dimmed { color: var(--muted); font-size: 12px; padding: 5px 10px; }
+
+    .pipe-arrow { color: #9ca3af; font-size: 15px; flex-shrink: 0; }
+    .pipe-label { font-size: 11px; color: var(--muted); }
+
+    /* branch (multiple inputs merging) */
+    .pipe-branch-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pipe-branch-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .pipe-branch-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      font-size: 14px;
+      color: #9ca3af;
+    }
+
+    /* ── Fan-in merge (grouping bracket + single arrow), auto-stretches to input height ── */
+    .merge {
+      display: flex;
+      align-items: center;
+      align-self: stretch;     /* span the full height of the input column */
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .merge-bracket {
+      width: 9px;
+      align-self: stretch;
+      margin: 7px 0;
+      border: 1.6px solid #9ca3af;
+      border-left: 0;
+      border-radius: 0 9px 9px 0;
+    }
+    .merge-arrow { color: #9ca3af; font-size: 16px; line-height: 1; }
+
+    /* ── Node colors keyed to function ── */
+    .pipe-node.n-geo    { background:#dbeafe; border:1px solid #93c5fd; color:#1e3a8a; }   /* geometry */
+    .pipe-node.n-match  { background:#ede9fe; border:1px solid #c4b5fd; color:#5b21b6; }   /* matching */
+    .pipe-node.n-verify { background:#fef3c7; border:1px solid #f59e0b; color:#92400e; font-weight:600; } /* geometric verification (novel gate) */
+    .pipe-node.n-pseudo { background:#fef9c3; border:1px solid #fde047; color:#854d0e; }   /* verified pseudo-labels */
+    .pipe-node.n-out    { background:#dcfce7; border:1px solid #4ade80; color:#15803d; font-weight:600; } /* trained deliverable */
+    .pipe-node.n-frozen { background:#f3f4f6; border:1px solid #d1d5db; color:#4b5563; }   /* frozen backbone */
+    .pipe-node .lock { font-size:10px; margin-right:5px; opacity:.65; }
+    .pipe-node .sub  { font-weight:400; color:var(--muted); font-size:11px; }
+    .n-frozen .sub   { color:#9ca3af; }
+    .n-out .sub, .n-verify .sub, .n-pseudo .sub, .n-geo .sub { color:inherit; opacity:.7; }
+
+    /* ── Hover/focus tooltips for collapsed sub-mechanics ── */
+    .pipe-node.tipped { position: relative; cursor: help; }
+    .pipe-node .tip-ico { margin-left:6px; font-size:11px; opacity:.55; }
+    .pipe-node.tipped:hover .tip-ico,
+    .pipe-node.tipped:focus-visible .tip-ico { opacity:1; }
+    .pipe-node .tip {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 9px);
+      transform: translateX(-50%) translateY(4px);
+      width: 240px;
+      max-width: 70vw;
+      background: #1f2937;
+      color: #f3f4f6;
+      font-size: 11.5px;
+      font-weight: 400;
+      line-height: 1.55;
+      letter-spacing: 0;
+      text-transform: none;
+      white-space: normal;
+      text-align: left;
+      padding: 9px 11px;
+      border-radius: 8px;
+      box-shadow: 0 8px 22px rgba(0,0,0,.22);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .15s ease, transform .15s ease;
+      z-index: 40;
+      pointer-events: none;
+    }
+    .pipe-node .tip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #1f2937;
+    }
+    .pipe-node .tip b { color:#fff; font-weight:600; }
+    .pipe-node.tipped:hover .tip,
+    .pipe-node.tipped:focus-within .tip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Results table ── */
+    .table-wrap { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+    thead th {
+      background: #f3f4f6;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(even) { background: #f9fafb; }
+
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      color: #374151;
+    }
+
+    tbody tr.highlight td { font-weight: 600; color: var(--accent); }
+
+    /* ── Grouped results table (Table C1) ── */
+    .results { font-size: 13px; }
+    .results th, .results td { text-align: center; white-space: nowrap; padding: 7px 9px; }
+    .results th:first-child, .results td:first-child { text-align: left; }
+    .results thead th { background: #f3f4f6; }
+    .results thead tr:first-child th { border-bottom: 1px solid #e5e7eb; }
+    .results thead tr.sub-th th { font-weight: 500; color: var(--muted); font-size: 12px; border-bottom: 2px solid var(--border); padding: 5px 9px; }
+    .results tbody tr:nth-child(even) { background: #fff; }   /* neutralize global zebra under group rows */
+    .results td:nth-child(2), .results td:nth-child(5),
+    .results td:nth-child(8), .results td:nth-child(11),
+    .results thead tr.sub-th th:nth-child(1), .results thead tr.sub-th th:nth-child(4),
+    .results thead tr.sub-th th:nth-child(7), .results thead tr.sub-th th:nth-child(10) { border-left: 1px solid #eef0f2; }
+    .results tr.grp td {
+      text-align: left;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .results .ref { color: #9ca3af; font-weight: 400; font-size: 11.5px; }
+    .results .best { font-weight: 700; color: #111827; }
+    .results .dag { color: #9ca3af; }
+    .results tbody tr.highlight td { background: #eff6ff; color: var(--accent); font-weight: 700; }
+    .table-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+
+    /* ── Collapsible limitations ── */
+    .limitations {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .limitations > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px;
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+    }
+    .limitations > summary::-webkit-details-marker { display: none; }
+    .limitations > summary .chev {
+      margin-left: auto;
+      color: var(--muted);
+      transition: transform .2s ease;
+      font-size: 14px;
+    }
+    .limitations[open] > summary .chev { transform: rotate(90deg); }
+    .limitations > summary .tag {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 10px;
+    }
+    .limitations > summary:hover { background: var(--bg); }
+    .limitations .lim-body {
+      padding: 4px 20px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .limitations .lim-body p { font-size: 14.5px; }
+    .limitations .lim-body p:first-child { margin-top: 14px; }
+    .limitations .lim-body .highlight-note {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin: 4px 0 14px;
+      font-size: 14px;
+      color: #713f12;
+    }
+    .limitations .lim-body .highlight-note strong { color: #92400e; }
+
+    /* ── Per-category SPair table (Table C2), wide ── */
+    .percat { font-size: 12px; }
+    .percat th, .percat td { text-align: center; white-space: nowrap; padding: 5px 6px; }
+    .percat th:first-child, .percat td:first-child { text-align: left; padding-left: 10px; }
+    .percat thead th { background: #f3f4f6; border-bottom: 2px solid var(--border); font-weight: 600; font-size: 11px; }
+    .percat tbody tr:nth-child(even) { background: #fff; }
+    .percat tr.grp td {
+      text-align: left;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .percat th.avg, .percat td.avg { border-left: 1px solid #d1d5db; }
+    .percat thead th { cursor: default; }
+    .percat .cat-ic { font-size: 15px; color: #374151; line-height: 1; }
+    .percat .cat-ic-img { height: 25px; width: auto; vertical-align: middle; }
+    .percat thead tr.super th { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #4338ca; background: #f3f4f6; padding: 6px; border-bottom: 1px solid #e5e7eb; }
+    .percat thead tr.super th:first-child { color: #374151; }
+    .percat .sep { border-left: 1px solid #cbd5e1; }
+    .percat .best { font-weight: 700; color: #111827; }
+    .percat tbody tr.highlight td { background: #eff6ff; color: var(--accent); font-weight: 400; }
+    .percat tbody tr.highlight td.best { font-weight: 700; }
+    .percat .ref { color: #9ca3af; font-weight: 400; font-size: 11px; }
+
+    /* ── Placeholder ── */
+    .placeholder {
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+      border: 1px dashed #c7d2fe;
+      border-radius: var(--radius);
+      height: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .placeholder i { font-size: 2rem; color: #c7d2fe; }
+
+    /* ── BibTeX ── */
+    .bibtex-block {
+      background: #1e293b;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .bibtex-block pre {
+      color: #e2e8f0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #334155;
+      color: #94a3b8;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .copy-btn:hover { background: #475569; color: #e2e8f0; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 28px 24px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ══════════════════════════════════════
+       Interactive teaser — correspondences
+       (scoped under .teaser-viz so the dark
+        demo theme never leaks onto the page)
+    ══════════════════════════════════════ */
+    .teaser-viz {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 18px 14px;
+      margin-top: 18px;
+    }
+    .teaser-viz .legend {
+      font-size: 13px;
+      margin-bottom: 14px;
+      color: #1f2937;
+      text-align: center;
+    }
+    /* 1fr | auto | 1fr grid keeps the separator bar at the exact horizontal centre,
+       regardless of the two labels' differing widths */
+    .teaser-viz .legend-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+    }
+    .teaser-viz .legend .side-l { text-align: right; }
+    .teaser-viz .legend .side-r { text-align: left; }
+    /* "move mouse" hint — centred line directly under the labels */
+    .teaser-viz .legend .hint {
+      margin-top: 6px;
+      font-size: .85em;
+      color: #6b7280;
+    }
+    /* matched arrow glyphs — identical size + vertical centering on both sides */
+    .teaser-viz .legend .ar {
+      display: inline-block;
+      font-size: .8em;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    /* separator drawn as a centered vertical bar so it sits in the middle of the line */
+    .teaser-viz .legend .sep {
+      display: inline-block;
+      width: 1px;
+      height: .95em;
+      background: currentColor;
+      opacity: .45;
+      vertical-align: middle;
+      margin: 0 .6em;
+    }
+    .teaser-viz .viz { cursor: ew-resize; }
+    .teaser-viz .row { margin-bottom: 18px; }
+    .teaser-viz .row:last-child { margin-bottom: 0; }
+    .teaser-viz .row-title {
+      font-size: 11.5px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 4px;
+    }
+    .teaser-viz .row-title sub { text-transform: none; }
+    .teaser-viz .img-labels { display: flex; margin-bottom: 3px; }
+    .teaser-viz .lbl {
+      font-size: 11px;
+      color: #6b7280;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .teaser-viz .rw { position: relative; }
+    .teaser-viz canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 3px;
+    }
+    .teaser-viz .lsv {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .teaser-viz .lsv line { stroke-width: 1; }
+    .teaser-viz .sline {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      background: rgba(31,41,55,0.55);
+      pointer-events: none;
+      display: none;
+      box-shadow: 0 0 4px rgba(0,0,0,0.2);
+    }
+    .teaser-viz #infoBar {
+      margin-top: 10px;
+      font-size: 12.5px;
+      color: #6b7280;
+      min-height: 1.3em;
+    }
+    .teaser-viz .sbar {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .teaser-viz .sbar b { color: #374151; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header>
+  <div class="venue-tag">arXiv 2026</div>
+
+  <h1>Geometry Matters: 3D Foundation Priors for Learning Semantic Correspondence</h1>
+
+  <p class="authors">
+    Artur Jesslen<sup>1</sup> &nbsp;&middot;&nbsp;
+    Olaf Dünkel<sup>2</sup> &nbsp;&middot;&nbsp;
+    Adam Kortylewski<sup>3</sup>
+  </p>
+  <p class="affiliation">
+    <sup>1</sup>University of Freiburg &nbsp;&nbsp;
+    <sup>2</sup>Max Planck Institute for Informatics, SIC &nbsp;&nbsp;
+    <sup>3</sup>CISPA Helmholtz Center for Information Security
+  </p>
+
+  <div class="btn-row">
+    <a href="https://arxiv.org/abs/2605.30093" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <rect width="16" height="16" rx="2.5" fill="white" fill-opacity="0.25"/>
+        <text x="8" y="11.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="6.5" font-weight="800" letter-spacing="0.3" fill="white">PDF</text>
+      </svg>
+      Paper
+    </a>
+    <a href="https://github.com/GenIntel/3D-SC" class="btn btn-outline">
+      <i class="fab fa-github"></i> Code [Coming Soon]
+    </a>
+    <a href="#" class="btn btn-outline">
+      <i class="fas fa-database"></i> Models [Coming Soon]
+    </a>
+    <a href="#bibtex" class="btn btn-outline">
+      <i class="fas fa-quote-right"></i> BibTeX
+    </a>
+  </div>
+</header>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main>
+  <!-- ── Abstract ── -->
+  <section class="abstract">
+    <h2>Abstract</h2>
+    <p>
+      Foundation features from self-supervised vision models and text-to-image diffusion models have proven effective for semantic correspondence estimation. However, because these features are learned primarily from 2D image objectives, they lack explicit 3D awareness and often confuse symmetric object sides, repeated parts, and visually similar structures that are distinct in 3D.
+    </p>
+    <p>
+      We introduce a <strong>3D-aware post-training framework</strong> that goes beyond available 2D foundation features by incorporating priors from 3D foundation models. Given an image, our method uses <em>SAM3D</em> to estimate object geometry and pose, and refines the pose through render-and-compare optimization. Subsequently, we render <em>PartField</em> descriptors from the reconstructed geometry into the image plane based on the estimated object pose. The resulting geometry-aware feature maps complement DINO and Stable Diffusion features, while geodesic distances on the reconstructed shapes enable reliable filtering of candidate correspondences.
+    </p>
+    <p>
+      We use the filtered matches as supervision to train a lightweight adapter on top of DINO and Stable Diffusion for semantic correspondence. In contrast to prior post-training approaches that require pose annotations and rely on coarse spherical geometry, our method automatically obtains instance-specific 3D structure and uses it to guide correspondence learning. Experiments show that our approach improves semantic correspondence over prior methods while reducing manual geometric supervision.
+    </p>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Figure 1 — Motivation (3-panel comparison)
+  ══════════════════════════════════════════════ -->
+  <section>
+    <h2>Motivation</h2>
+    <p>Purely 2D features confuse symmetric sides and repeated parts. Geodesic filtering recovers precision at the cost of recall. Our PartField integration restores dense, accurate correspondences.</p>
+
+    <div class="teaser-viz">
+      <div class="legend">
+        <div class="legend-row">
+          <span class="side-l"><span class="ar">&#9664;&#xFE0E;</span> Geodesic-filtered Correspondences</span>
+          <span class="sep"></span>
+          <span class="side-r">All Mutual Nearest Neighbor <span class="ar">&#9654;&#xFE0E;</span></span>
+        </div>
+        <div class="hint">&#8592; move mouse &#8594;</div>
+      </div>
+
+      <div class="viz" id="viz">
+        <div class="row">
+          <div class="row-title">SD+DINO </div>
+          <div class="rw">
+            <canvas id="cv0"></canvas>
+            <svg id="sf0" class="lsv" viewBox="0 0 1010 375" preserveAspectRatio="none"></svg>
+            <svg id="sk0" class="lsv" viewBox="0 0 1010 375" preserveAspectRatio="none"></svg>
+            <div id="sl0" class="sline"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-title">SD+DINO+PartField (Ours) </div>
+          <div class="rw">
+            <canvas id="cv1"></canvas>
+            <svg id="sf1" class="lsv" viewBox="0 0 1010 375" preserveAspectRatio="none"></svg>
+            <svg id="sk1" class="lsv" viewBox="0 0 1010 375" preserveAspectRatio="none"></svg>
+            <div id="sl1" class="sline"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="fig-caption">
+      <strong>Figure 1.</strong>
+      Semantic correspondence on a challenging cross-instance pair.
+      (a) SD+DINO features produce many incorrect matches due to left–right and repeated-part confusion.
+      (b) Geodesic filtering removes wrong matches but leaves sparse correspondences.
+      (c) Incorporating PartField descriptors with filtering yields dense and accurate correspondences even under large pose changes.
+    </p>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Figure 2 — Full Method Pipeline
+  ══════════════════════════════════════════════ -->
+  <section>
+    <h2>Method</h2>
+    <p>Our approach consists of three sequential stages. Starting from a single image, we reconstruct instance-specific 3D geometry and use it to generate geometry-verified pseudo-labels for training a lightweight correspondence adapter.</p>
+
+    <p style="font-size:13px;color:var(--muted);margin:-4px 0 4px;"><i class="fas fa-circle-info" style="margin-right:5px;opacity:.6"></i>Hover (or tap) any step marked <i class="fas fa-circle-info" style="opacity:.6"></i> for its sub-mechanics.</p>
+
+    <div class="pipeline">
+
+      <!-- Stage 1: Reconstruction -->
+      <div class="pipeline-stage stage-1">
+        <div class="stage-title"><i class="fas fa-cube" style="margin-right:5px"></i>Stage 1 &mdash; Canonicalized 3D Reconstruction</div>
+
+        <div class="pipe-row">
+          <div class="pipe-node">Single<br>Image</div>
+          <span class="pipe-arrow">&#8594;</span>
+          <div class="pipe-node tipped" tabindex="0">SAM3 +<br>SAM3D
+            <i class="fas fa-circle-info tip-ico"></i>
+            <span class="tip"><b>SAM3</b> segments the object (2D mask); <b>SAM3D</b> lifts the mask to an instance-specific 3D mesh.</span>
+          </div>
+          <span class="pipe-arrow">&#8594;</span>
+          <div class="pipe-node tipped" tabindex="0">Pose<br>Canonicalization
+            <i class="fas fa-circle-info tip-ico"></i>
+            <span class="tip"><b>Render-and-compare</b> aligns mesh to image &mdash; Phase&nbsp;1: distance-transform alignment, Phase&nbsp;2: soft-IoU refinement. <b>OrientAnything&nbsp;V2</b> resolves the four-fold yaw ambiguity by majority vote over 8 orientations.</span>
+          </div>
+          <span class="pipe-arrow">&#8594;</span>
+          <div class="pipe-node n-geo">Canonicalized<br>Mesh + Pose</div>
+        </div>
+      </div>
+
+      <!-- Connector arrow -->
+      <div class="stage-connector">
+        <i class="fas fa-arrow-down"></i>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">grounds matching in geometry</span>
+      </div>
+
+      <!-- Stage 2: Geometry-Verified Pseudo-Labels -->
+      <div class="pipeline-stage stage-2">
+        <div class="stage-title"><i class="fas fa-tags" style="margin-right:5px"></i>Stage 2 &mdash; Geometry-Verified Pseudo-Labels</div>
+
+        <div class="pipe-row" style="align-items:center; flex-wrap:nowrap; gap:8px;">
+
+          <!-- Fan-in inputs -->
+          <div class="pipe-branch-inputs">
+            <div class="pipe-node n-frozen"><i class="fas fa-lock lock"></i>DINOv2</div>
+            <div class="pipe-node n-frozen"><i class="fas fa-lock lock"></i>Stable<br>Diffusion</div>
+            <div class="pipe-node n-geo tipped" tabindex="0">PartField
+              <i class="fas fa-circle-info tip-ico"></i>
+              <span class="tip">Part-aware descriptors <b>rasterized from the Stage-1 mesh</b> &mdash; the 3D prior that carries geometry into matching.</span>
+            </div>
+          </div>
+
+          <div class="merge">
+            <span class="merge-bracket"></span>
+            <span class="merge-arrow">&#8594;</span>
+          </div>
+
+          <div style="display:flex;align-items:center;align-self:center;gap:6px;flex-wrap:wrap;">
+            <div class="pipe-node n-match">Feature<br>Fusion</div>
+            <span class="pipe-arrow">&#8594;</span>
+            <div class="pipe-node n-match tipped" tabindex="0">NN<br>Matching
+              <i class="fas fa-circle-info tip-ico"></i>
+              <span class="tip">Nearest-neighbour search in the fused descriptor space, kept under <b>relaxed cyclic consistency</b>.</span>
+            </div>
+            <span class="pipe-arrow">&#8594;</span>
+            <div class="pipe-node n-verify tipped" tabindex="0">Geodesic<br>Filtering
+              <i class="fas fa-circle-info tip-ico"></i>
+              <span class="tip"><b>The quality gate.</b> Candidates are lifted onto the mesh surface and rejected if their <b>bicyclic geodesic distance</b> exceeds a threshold &mdash; the 3D check that replaces fragile spherical priors.</span>
+            </div>
+            <span class="pipe-arrow">&#8594;</span>
+            <div class="pipe-node n-pseudo">Verified<br>Pseudo-labels</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Connector arrow -->
+      <div class="stage-connector">
+        <i class="fas fa-arrow-down"></i>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">supervision &mdash; no manual annotations</span>
+      </div>
+
+      <!-- Stage 3: Adapter Training -->
+      <div class="pipeline-stage stage-3">
+        <div class="stage-title"><i class="fas fa-sliders" style="margin-right:5px"></i>Stage 3 &mdash; Lightweight Adapter Training</div>
+
+        <div class="pipe-row" style="align-items:center; flex-wrap:nowrap; gap:8px;">
+
+          <!-- Fan-in inputs -->
+          <div class="pipe-branch-inputs">
+            <div class="pipe-node n-pseudo">Verified<br>Pseudo-labels</div>
+            <div class="pipe-node n-frozen"><i class="fas fa-lock lock"></i>DINO + Stable<br>Diffusion <span class="sub">(frozen)</span></div>
+          </div>
+
+          <div class="merge">
+            <span class="merge-bracket"></span>
+            <span class="merge-arrow">&#8594;</span>
+          </div>
+
+          <div style="display:flex;align-items:center;align-self:center;gap:6px;flex-wrap:wrap;">
+            <div class="pipe-node tipped" tabindex="0">Lightweight<br>Adapter
+              <i class="fas fa-circle-info tip-ico"></i>
+              <span class="tip">A small trainable head on the frozen features, supervised by a <b>sparse contrastive loss</b> + <b>dense regression loss</b>.</span>
+            </div>
+            <span class="pipe-arrow">&#8594;</span>
+            <div class="pipe-node n-out">Trained<br>Correspondence<br>Model</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- .pipeline -->
+
+    <p class="fig-caption">
+      <strong>Figure 2.</strong>
+      Overview of our three-stage pipeline.
+      <strong>Stage 1</strong> turns a single image into a canonicalized 3D mesh and pose (SAM3 + SAM3D, render-and-compare, OrientAnything V2 for yaw).
+      <strong>Stage 2</strong> fuses frozen DINO and Stable Diffusion features with mesh-derived PartField descriptors, matches them, and keeps only candidates that pass a <em>geodesic-distance check on the mesh</em> (amber) — yielding geometry-verified pseudo-labels.
+      <strong>Stage 3</strong> uses those pseudo-labels to train a lightweight adapter on the frozen backbone, requiring no manual pose annotations.
+      Hover any <i class="fas fa-circle-info" style="opacity:.6"></i> step for its sub-mechanics.
+    </p>
+  </section>
+
+  <!-- ── Results ── -->
+  <section>
+    <h2>Quantitative Results</h2>
+    <p>We report per-image PCK (Percentage of Correct Keypoints, %, &uarr; higher is better) on four standard benchmarks: <strong>SPair-71k</strong> and its challenging <strong>Geo-Aware</strong> subset (symmetric / repeated parts), <strong>AP-10K</strong> (animal pose), and <strong>SpairU</strong>. Methods are grouped by supervision; the best result per group is in <strong>bold</strong> and our method is highlighted. <strong>3D-SC is best in its category</strong> — weakly supervised without human annotations — across every benchmark, and on SPair-71k it even surpasses DIY-SC, which is trained with human pose annotations (73.0 vs. 71.6 at PCK@0.10).</p>
+    <div class="table-wrap">
+      <table class="results">
+        <thead>
+          <tr>
+            <th rowspan="2">Method</th>
+            <th colspan="3">SPair-71k</th>
+            <th colspan="3">SPair-Geo-Aware</th>
+            <th colspan="3">AP-10K (0.10)</th>
+            <th colspan="3">SpairU</th>
+          </tr>
+          <tr class="sub-th">
+            <th>0.01</th><th>0.05</th><th>0.10</th>
+            <th>0.01</th><th>0.05</th><th>0.10</th>
+            <th>I.S.</th><th>C.S.</th><th>C.F.</th>
+            <th>0.01</th><th>0.05</th><th>0.10</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="grp"><td colspan="13">Supervised</td></tr>
+          <tr>
+            <td>DHF <span class="ref">Luo et al.</span></td>
+            <td>8.7</td><td>50.2</td><td>64.9</td>
+            <td>8.0</td><td>45.8</td><td>62.7</td>
+            <td>62.7</td><td>60.0</td><td>47.8</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+          </tr>
+          <tr>
+            <td>SD+DINOv2 <span class="ref">Zhang et al.</span></td>
+            <td>9.6</td><td>57.7</td><td>74.6</td>
+            <td>9.9</td><td>57.0</td><td>77.0</td>
+            <td>77.0</td><td>74.0</td><td>65.8</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+          </tr>
+          <tr>
+            <td>GECO <span class="ref">Hartwig et al.</span></td>
+            <td>14.2</td><td>59.6</td><td>73.6</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>82.5</td><td>81.2</td><td>76.6</td>
+            <td>&ndash;</td><td>&ndash;</td><td>55.2</td>
+          </tr>
+          <tr>
+            <td>Jamais Vu <span class="ref">Mariotti et al.</span></td>
+            <td>20.5</td><td>71.9</td><td>82.5</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>&ndash;</td><td>&ndash;</td><td>62.4</td>
+          </tr>
+          <tr>
+            <td>Geo-SC <span class="ref">Zhang et al.</span></td>
+            <td>21.7</td><td>72.8</td><td>83.2</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>87.7</td><td>85.9</td><td>78.5</td>
+            <td>&ndash;</td><td>&ndash;</td><td>56.9</td>
+          </tr>
+          <tr>
+            <td>SemAlign3D <span class="ref">Wandel &amp; Wang</span></td>
+            <td>15.8</td><td>77.5</td><td class="best">88.9</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+          </tr>
+          <tr>
+            <td>MARCO <span class="ref">Cuttano et al.</span></td>
+            <td class="best">27.0</td><td class="best">77.6</td><td>87.2</td>
+            <td class="best">22.8<span class="dag">&dagger;</span></td><td class="best">76.8<span class="dag">&dagger;</span></td><td class="best">87.5<span class="dag">&dagger;</span></td>
+            <td class="best">89.1</td><td class="best">88.3</td><td class="best">83.4</td>
+            <td class="best">5.0<span class="dag">&dagger;</span></td><td class="best">42.7<span class="dag">&dagger;</span></td><td class="best">67.5</td>
+          </tr>
+
+          <tr class="grp"><td colspan="13">Unsupervised</td></tr>
+          <tr>
+            <td>DINOv2+NN <span class="ref">Zhang et al.</span></td>
+            <td>6.3</td><td>38.4</td><td class="best">53.9</td>
+            <td class="best">3.4</td><td class="best">28.2</td><td>42.0</td>
+            <td class="best">60.9</td><td class="best">57.3</td><td class="best">47.4</td>
+            <td>&ndash;</td><td>&ndash;</td><td class="best">54.9</td>
+          </tr>
+          <tr>
+            <td>DIFT <span class="ref">Tang et al.</span></td>
+            <td class="best">7.2</td><td class="best">39.7</td><td>52.9</td>
+            <td class="best">3.4</td><td class="best">28.2</td><td class="best">42.5</td>
+            <td>50.3</td><td>46.0</td><td>35.0</td>
+            <td>&ndash;</td><td>&ndash;</td><td>47.4</td>
+          </tr>
+
+          <tr class="grp"><td colspan="13">Weakly supervised &mdash; with human annotations</td></tr>
+          <tr>
+            <td>Spherical Map. <span class="ref">Mariotti et al.</span></td>
+            <td>8.4</td><td>48.2</td><td>64.4</td>
+            <td>&ndash;</td><td>&ndash;</td><td>&ndash;</td>
+            <td>65.4</td><td>63.1</td><td>51.0</td>
+            <td>&ndash;</td><td>&ndash;</td><td>61.0</td>
+          </tr>
+          <tr>
+            <td>DIY-SC <span class="ref">D&uuml;nkel et al.</span></td>
+            <td class="best">10.1</td><td class="best">53.8</td><td class="best">71.6</td>
+            <td class="best">7.7</td><td class="best">47.7</td><td class="best">67.5</td>
+            <td class="best">70.6</td><td class="best">69.8</td><td class="best">57.8</td>
+            <td class="best">5.4</td><td class="best">44.0</td><td class="best">67.9</td>
+          </tr>
+
+          <tr class="grp"><td colspan="13">Weakly supervised &mdash; without human annotations</td></tr>
+          <tr>
+            <td>SD+DINOv2 <span class="ref">Zhang et al.</span></td>
+            <td>7.9</td><td>44.7</td><td>59.9</td>
+            <td>5.3</td><td>34.5</td><td>49.3</td>
+            <td>62.9</td><td>59.3</td><td>48.3</td>
+            <td>&ndash;</td><td>&ndash;</td><td>59.4</td>
+          </tr>
+          <tr>
+            <td>DIY-SC+OriAny <span class="ref">D&uuml;nkel et al.</span></td>
+            <td>9.5</td><td>51.2</td><td>69.6</td>
+            <td>6.9</td><td>45.7</td><td>65.8</td>
+            <td>69.3</td><td>66.8</td><td>54.0</td>
+            <td>5.2</td><td>43.1</td><td>66.3</td>
+          </tr>
+          <tr class="highlight">
+            <td>3D-SC (Ours)</td>
+            <td>10.2</td><td>54.8</td><td>73.0</td>
+            <td>7.8</td><td>50.1</td><td>70.8</td>
+            <td>69.6</td><td>68.5</td><td>56.9</td>
+            <td>5.6</td><td>43.5</td><td>67.3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">
+      PCK@&alpha;: a prediction is correct if it lies within &alpha;&middot;max(h,&thinsp;w) of the ground-truth keypoint.
+      AP-10K columns: <strong>I.S.</strong> intra-species, <strong>C.S.</strong> cross-species, <strong>C.F.</strong> cross-family.
+      <span class="dag">&dagger;</span> obtained from the official checkpoint.
+      Best per supervision group in bold; our method highlighted. Numbers reproduced from Table C1 of the paper.
+    </p>
+
+    <h3 style="font-size:1.05rem;font-weight:600;margin:28px 0 6px;">Per-category PCK@0.1 on SPair-71k</h3>
+    <p style="font-size:13px;color:#374151;margin-bottom:10px;">Per-keypoint PCK@0.1, grouped into <strong>man-made objects</strong> and <strong>fauna &amp; flora</strong>. Our gains concentrate in rigid, symmetric man-made categories &mdash; <strong>bus (+10.8)</strong>, <strong>tv/monitor (+9.8)</strong>, <strong>bottle (+8.8)</strong>, <strong>car (+6.9)</strong>, <strong>train (+6.2)</strong> over DIY-SC+OriAny &mdash; exactly where 2D features confuse symmetric sides and repeated parts; non-rigid living categories show little change.</p>
+    <div class="table-wrap">
+      <table class="percat">
+        <thead>
+          <tr class="super"><th rowspan="2">Method</th><th colspan="10">Man-made objects</th><th colspan="8" class="sep">Fauna and Flora</th><th rowspan="2" class="avg">Avg</th></tr>
+          <tr><th title="aeroplane" aria-label="aeroplane"><i class="fas fa-plane cat-ic"></i></th><th title="bicycle" aria-label="bicycle"><i class="fas fa-bicycle cat-ic"></i></th><th title="boat" aria-label="boat"><i class="fas fa-ship cat-ic"></i></th><th title="bottle" aria-label="bottle"><i class="fas fa-wine-bottle cat-ic"></i></th><th title="bus" aria-label="bus"><i class="fas fa-bus cat-ic"></i></th><th title="car" aria-label="car"><i class="fas fa-car cat-ic"></i></th><th title="chair" aria-label="chair"><i class="fas fa-chair cat-ic"></i></th><th title="motorbike" aria-label="motorbike"><i class="fas fa-motorcycle cat-ic"></i></th><th title="train" aria-label="train"><i class="fas fa-train cat-ic"></i></th><th title="tvmonitor" aria-label="tv/monitor"><i class="fas fa-tv cat-ic"></i></th><th title="bird" aria-label="bird" class="sep"><i class="fas fa-dove cat-ic"></i></th><th title="cat" aria-label="cat"><i class="fas fa-cat cat-ic"></i></th><th title="cow" aria-label="cow"><i class="fas fa-cow cat-ic"></i></th><th title="dog" aria-label="dog"><i class="fas fa-dog cat-ic"></i></th><th title="horse" aria-label="horse"><i class="fas fa-horse cat-ic"></i></th><th title="person" aria-label="person"><i class="fas fa-person cat-ic"></i></th><th title="sheep" aria-label="sheep"><img src="content/sheep.png" alt="sheep" class="cat-ic-img" /></th><th title="pottedplant" aria-label="potted plant"><i class="fas fa-seedling cat-ic"></i></th></tr>
+        </thead>
+        <tbody>
+          <tr class="grp"><td colspan="20">Unsupervised</td></tr>
+          <tr><td>DINOv2+NN <span class="ref">Zhang et al.</span></td><td class="best">72.7</td><td class="best">62.0</td><td class="best">41.3</td><td>40.4</td><td>52.3</td><td class="best">51.5</td><td>36.2</td><td class="best">61.0</td><td>54.3</td><td>24.2</td><td class="sep best">85.2</td><td>71.1</td><td>67.1</td><td class="best">64.6</td><td class="best">67.6</td><td class="best">68.2</td><td class="best">62.0</td><td>30.7</td><td class="avg">55.6</td></tr>
+          <tr><td>DIFT <span class="ref">Tang et al.</span></td><td>63.5</td><td>54.5</td><td>34.5</td><td class="best">46.2</td><td class="best">52.7</td><td>48.3</td><td class="best">39.0</td><td>53.3</td><td class="best">71.1</td><td class="best">63.4</td><td class="sep">80.8</td><td class="best">77.7</td><td class="best">76.0</td><td>54.9</td><td>61.3</td><td>46.0</td><td>57.1</td><td class="best">57.8</td><td class="avg best">57.7</td></tr>
+          <tr class="grp"><td colspan="20">Weakly supervised &mdash; with human annotations</td></tr>
+          <tr><td>Spherical Mapper <span class="ref">Mariotti et al.</span></td><td>75.3</td><td>63.8</td><td>48.2</td><td>50.9</td><td>74.9</td><td>71.1</td><td>47.3</td><td>65.4</td><td>75.0</td><td>58.5</td><td class="sep">87.7</td><td>81.7</td><td>81.6</td><td>66.9</td><td>73.1</td><td>61.8</td><td>70.2</td><td>55.5</td><td class="avg">67.8</td></tr>
+          <tr><td>DIY-SC <span class="ref">Dünkel et al.</span></td><td class="best">77.2</td><td class="best">69.1</td><td class="best">54.2</td><td class="best">57.9</td><td class="best">83.7</td><td class="best">77.5</td><td class="best">53.1</td><td class="best">72.5</td><td class="best">77.2</td><td class="best">69.5</td><td class="sep best">90.8</td><td class="best">86.5</td><td class="best">86.7</td><td class="best">73.1</td><td class="best">78.5</td><td class="best">74.0</td><td class="best">76.0</td><td class="best">73.5</td><td class="avg best">74.4</td></tr>
+          <tr class="grp"><td colspan="20">Weakly supervised &mdash; without human annotations</td></tr>
+          <tr><td>SD+DINOv2 <span class="ref">Zhang et al.</span></td><td>73.0</td><td>64.1</td><td>40.7</td><td>52.9</td><td>55.0</td><td>53.8</td><td>45.5</td><td>63.3</td><td>66.2</td><td>53.5</td><td class="sep">86.4</td><td>78.6</td><td>77.3</td><td>64.7</td><td>69.7</td><td>69.2</td><td>67.6</td><td>58.4</td><td class="avg">64.0</td></tr>
+          <tr><td>Geo-SC <span class="ref">Zhang et al.</span></td><td>78.0</td><td>66.4</td><td>44.5</td><td>60.1</td><td>66.6</td><td>60.8</td><td>53.2</td><td>66.1</td><td>83.8</td><td>55.5</td><td class="sep">90.2</td><td>82.7</td><td>82.3</td><td>69.5</td><td>75.1</td><td>71.7</td><td>71.6</td><td>58.9</td><td class="avg">69.6</td></tr>
+          <tr><td>DIY-SC+OriAny <span class="ref">Dünkel et al.</span></td><td>76.1</td><td>65.9</td><td>52.2</td><td>57.3</td><td>75.7</td><td>75.3</td><td>52.8</td><td>69.9</td><td>76.7</td><td>69.6</td><td class="sep best">90.4</td><td class="best">85.0</td><td class="best">86.3</td><td>71.4</td><td class="best">78.3</td><td class="best">73.5</td><td class="best">75.0</td><td class="best">69.2</td><td class="avg">72.9</td></tr>
+          <tr class="highlight"><td>3D-SC (Ours)</td><td class="best">77.6</td><td class="best">70.3</td><td class="best">54.8</td><td class="best">66.1</td><td class="best">86.5</td><td class="best">82.2</td><td class="best">56.8</td><td class="best">75.0</td><td class="best">82.9</td><td class="best">79.4</td><td class="sep best">90.4</td><td>83.5</td><td>84.6</td><td class="best">72.6</td><td>77.8</td><td>72.5</td><td>72.3</td><td>68.6</td><td class="avg best">76.3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">Per-keypoint PCK@0.1 (differs from the per-image PCK in the table above). Columns grouped into <strong>man-made objects</strong> and <strong>fauna &amp; flora</strong>. Best per supervision group in bold; our method highlighted. Hover a header for the full category name.</p>
+  </section>
+
+  <!-- ── Qualitative ── -->
+  <section>
+    <h2>Qualitative Results</h2>
+    <p>We compare the <strong>pseudo-groundtruth correspondence annotations</strong> generated by each method &mdash; the geometry-verified pseudo-labels used to supervise the adapter. Our 3D-aware filtering yields denser and more accurate annotations than the spherical-prior pipeline of DIY-SC (D&uuml;nkel et al.), particularly on symmetric and repeated parts.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <img src="content/quali-supp-1.png" alt="Pseudo-groundtruth annotations generated by our method (3D-SC)" style="width:100%;border-radius:var(--radius);border:1px solid var(--border);" />
+        <p style="text-align:center;font-size:13px;font-weight:600;margin-top:8px;color:var(--accent);">3D-SC (Ours)</p>
+        <p style="text-align:center;font-size:12px;margin-top:2px;color:var(--muted);">Pseudo-groundtruth annotations</p>
+      </div>
+      <div>
+        <img src="content/quali-supp-2.png" alt="Pseudo-groundtruth annotations generated by DIY-SC (Dünkel et al.)" style="width:100%;border-radius:var(--radius);border:1px solid var(--border);" />
+        <p style="text-align:center;font-size:13px;font-weight:600;margin-top:8px;color:var(--muted);">DIY-SC <span style="font-weight:400;">(D&uuml;nkel et al.)</span></p>
+        <p style="text-align:center;font-size:12px;margin-top:2px;color:var(--muted);">Pseudo-groundtruth annotations</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Limitations (collapsible) ── -->
+  <section>
+    <details class="limitations">
+      <summary>
+        Limitations &amp; Future Work
+        <i class="fas fa-chevron-right chev"></i>
+      </summary>
+      <div class="lim-body">
+        <p>Our framework relies on off-the-shelf 3D foundation models, and its current weaknesses stem largely from where those models are weakest.</p>
+
+        <p><strong>Dependence on single-image reconstruction.</strong> The pipeline depends on <em>SAM3D</em>'s pose and shape estimates. Reconstruction errors propagate through the 2D&ndash;3D reprojection and can degrade geodesic consistency &mdash; although our bicyclic geodesic filtering removes most of the resulting false positives before they reach the adapter.</p>
+
+        <p><strong>PartField gives coarse, part-level cues.</strong> PartField is trained with a part-level contrastive objective, so it provides regional rather than precise within-part localization. This is why it receives a relatively low fusion weight (&gamma;&nbsp;=&nbsp;1/6), and it is most visible on <em>SPair-U</em>, where the extra keypoints typically lie in the middle of a part &mdash; exactly where PartField contributes the least signal.</p>
+
+        <div class="highlight-note">
+          <strong>The biggest opportunity: morphable categories (animals &amp; flora).</strong>
+          PartField is trained predominantly on <em>rigid</em> shapes, so it generalizes less reliably to deformable objects. This is precisely the pattern in our per-category results: while rigid man-made categories see large gains (bus&nbsp;+10.8, tv/monitor&nbsp;+9.8, bottle&nbsp;+8.8, car&nbsp;+6.9), non-rigid living categories show little movement or slight regressions &mdash; sheep&nbsp;(&minus;2.7), cow&nbsp;(&minus;1.7), cat&nbsp;(&minus;1.5), and potted plant&nbsp;(&minus;0.6, since SAM3D fuses pot and plant into one shape while the keypoints lie only on the pot). Our method is therefore currently <em>bottlenecked by the 3D feature, not the framework</em>. A 3D descriptor purpose-built for <strong>morphable / articulated categories</strong> &mdash; one that models part deformation and within-part structure for animals &mdash; could be assigned a much higher fusion weight and would likely <strong>drastically improve results on the fauna &amp; flora half of the benchmark</strong>, closing most of the remaining gap to the man-made categories and lifting the overall average well beyond what rigid-shape features allow today.
+        </div>
+
+        <p><strong>Sparse cross-mesh matching.</strong> Our cross-mesh correspondence uses nearest-neighbor matching in PartField space. Replacing it with denser registration &mdash; via optimal transport or functional maps &mdash; is a natural next step that trades additional compute for finer, deformation-aware alignment, and would compound with a morphable-object descriptor above.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ── BibTeX ── -->
+  <section id="bibtex">
+    <h2>BibTeX</h2>
+    <div class="bibtex-block">
+      <button class="copy-btn" onclick="copyBibtex(this)"><i class="fas fa-copy"></i> Copy</button>
+      <pre id="bibtex-text">@article{jesslen2026geometry,
+  title     = {Geometry Matters: {3D} Foundation Priors for Learning Semantic Correspondence},
+  author    = {Jesslen, Artur and D{\"u}nkel, Olaf and Kortylewski, Adam},
+  journal   = {arXiv preprint arXiv:2605.30093},
+  year      = {2026},
+}</pre>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer>
+  <p>
+    &copy; 2026 &nbsp;&middot;&nbsp;
+    Artur Jesslen
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/GenIntel/3D-SC"><i class="fab fa-github"></i> GitHub</a>
+  </p>
+</footer>
+
+<script>
+  function copyBibtex(btn) {
+    const text = document.getElementById('bibtex-text').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied';
+      setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> Copy', 2000);
+    });
+  }
+</script>
+
+<!-- ══════════════ Interactive teaser logic ══════════════ -->
+<!-- Heavy data (CFGS correspondences + base64 images) lives in this asset -->
+<script src="content/teaser_data.js"></script>
+<script>
+(function () {
+  const SW=500,SH=332,TW=500,TH=375,GAP=10;
+  const CW=1010,CH=375;
+  const SRC_X=TW+GAP;
+  const VIZ_RADIUS=3;
+
+  const sI=new Image(),tI=new Image();
+
+  const ROWS=[
+      {mnn:'sd_dino',    geo:'sd_dino_geo'},
+      {mnn:'sd_dino_pf', geo:'sd_dino_pf_geo'},
+  ];
+  const cvs   =[document.getElementById('cv0'),document.getElementById('cv1')];
+  const ctxs  =cvs.map(c=>c.getContext('2d'));
+  const sfull =[document.getElementById('sf0'),document.getElementById('sf1')];
+  const skept =[document.getElementById('sk0'),document.getElementById('sk1')];
+  const slines=[document.getElementById('sl0'),document.getElementById('sl1')];
+  const viz   =document.getElementById('viz');
+  cvs.forEach(c=>{c.width=CW;c.height=CH;});
+  const TY_OFF=(CH-TH)>>1, SY_OFF=(CH-SH)>>1;
+
+  function buildGeoSet(key){
+      const d=CFGS[key],s=new Set();
+      for(let i=0;i<d.src_uv.length;i++) s.add(d.src_uv[i][1]*SW+d.src_uv[i][0]);
+      return s;
+  }
+
+  // Build all SVG <line> elements as a single innerHTML string (one-shot DOM parse).
+  // Spatial deduplication: at most one correspondence per N×N cell in source and target.
+  function buildSvg(svgEl,rowIdx,geoOnly){
+      const row=ROWS[rowIdx];
+      const dMnn=CFGS[row.mnn];
+      const geoSet=buildGeoSet(row.geo);
+      const n=dMnn.src_uv.length;
+      const N=VIZ_RADIUS;
+      const scols=(SW/N|0)+1, tcols=(TW/N|0)+1;
+      const seenSrc=new Set(), seenTrg=new Set();
+      const parts=[];
+      for(let i=0;i<n;i++){
+          const sx=dMnn.src_uv[i][0],sy=dMnn.src_uv[i][1];
+          const tx=dMnn.trg_uv[i][0],ty=dMnn.trg_uv[i][1];
+          if(geoOnly&&!geoSet.has(sy*SW+sx)) continue;
+          const sk=(sy/N|0)*scols+(sx/N|0);
+          const tk=(ty/N|0)*tcols+(tx/N|0);
+          if(seenSrc.has(sk)||seenTrg.has(tk)) continue;
+          seenSrc.add(sk); seenTrg.add(tk);
+          const cr=dMnn.colors[i];
+          parts.push('<line x1="'+tx+'" y1="'+(ty+TY_OFF)+
+                     '" x2="'+(SRC_X+sx)+'" y2="'+(sy+SY_OFF)+
+                     '" stroke="rgb('+cr[0]+','+cr[1]+','+cr[2]+')"/>');
+      }
+      svgEl.innerHTML=parts.join('');
+  }
+
+  function drawBase(i){
+      const cx=ctxs[i];
+      cx.drawImage(tI,0,TY_OFF);
+      cx.drawImage(sI,SRC_X,SY_OFF);
+      cx.strokeStyle='rgba(107,114,128,0.5)';
+      cx.lineWidth=1;cx.setLineDash([4,4]);
+      cx.beginPath();cx.moveTo(TW+GAP/2,0);cx.lineTo(TW+GAP/2,CH);cx.stroke();
+      cx.setLineDash([]);
+  }
+
+  function updateSlider(clientX){
+      for(let i=0;i<2;i++){
+          const cr=cvs[i].getBoundingClientRect();
+          const pct=Math.max(0,Math.min(100,(clientX-cr.left)/cr.width*100));
+          sfull[i].style.clipPath='inset(0 '+(100-pct).toFixed(2)+'% 0 0)';
+          skept[i].style.clipPath='inset(0 0 0 '+pct.toFixed(2)+'%)';
+          slines[i].style.left=pct.toFixed(2)+'%';
+          slines[i].style.display='block';
+      }
+  }
+
+  viz.addEventListener('mousemove',function(e){
+      updateSlider(e.clientX);
+  });
+
+  let loaded=0;
+  function onLoad(){
+      if(++loaded<2) return;
+      for(let i=0;i<2;i++){
+          drawBase(i);
+          buildSvg(sfull[i],i,false);  // all mNN lines
+          buildSvg(skept[i],i,true);   // geo-kept lines only
+          // Default: slider at 100% — show all mNN across the full width.
+          sfull[i].style.clipPath='inset(0 0 0 0)';
+          skept[i].style.clipPath='inset(0 0 0 100%)';
+          slines[i].style.left='100%';
+          slines[i].style.display='block';
+      }
+      const nL=CFGS.sd_dino.src_uv.length,    nLg=CFGS.sd_dino_geo.src_uv.length;
+      const nR=CFGS.sd_dino_pf.src_uv.length, nRg=CFGS.sd_dino_pf_geo.src_uv.length;
+      const pL=(nL?((nLg/nL)*100).toFixed(1):'—'),pR=(nR?((nRg/nR)*100).toFixed(1):'—');
+  }
+  sI.onload=onLoad;tI.onload=onLoad;
+  sI.src=TEASER_IMG_SRC;tI.src=TEASER_IMG_TRG;
+})();
+</script>
+
+</body>
+</html>
